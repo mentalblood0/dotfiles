@@ -1,5 +1,7 @@
 [[language]]
 name = "rust"
+formatter = { command = "rustfmt", args = ["--config", "format_strings=true"] }
+auto-format = true
 
 [language.auto-pairs]
 '{' = '}'
