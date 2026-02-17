@@ -1,0 +1,58 @@
+[[language]]
+name = "rust"
+
+[language.auto-pairs]
+'{' = '}'
+'[' = ']'
+'"' = '"'
+'`' = '`'
+
+[language-server.ty]
+command = "ty"
+args = ["server"]
+
+[[language]]
+name = "python"
+scope = "source.python"
+injection-regex = "python"
+file-types = ["py", "pyi", "py3", "pyw"]
+language-servers = ["ty"]
+auto-format = true
+
+[language.formatter]
+command = "black"
+args = ["--stdin-filename", "%{buffer_name}", "-"]
+
+[[language]]
+name = "nim"
+auto-format = true
+formatter = { command = "nph", args = ["-"] }
+
+[[language]]
+name = "toml"
+auto-format = true
+formatter = { command = "taplo", args = ["fmt", "-"] }
+
+[[language]]
+name = "json"
+auto-format = true
+formatter = { command = "fixjson" }
+
+[[language]]
+name = "cpp"
+auto-format = true
+formatter = { command = "clang-format" }
+
+[[language]]
+name = "crystal"
+auto-format = true
+formatter = { command = "crystal", args = ["tool", "format", "-"] }
+
+[[language]]
+name = "c-sharp"
+auto-format = true
+formatter = { command = "dotnet-csharpier", args = [
+  "--no-cache",
+  "--no-msbuild-check",
+  "--fast",
+] }

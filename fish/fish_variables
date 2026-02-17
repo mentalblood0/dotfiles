@@ -1,0 +1,33 @@
+# This file contains fish universal variable definitions.
+# VERSION: 3.0
+SETUVAR __fish_initialized:4300
+SETUVAR _fisher_jorgebucaran_2F_fisher_files:\x7e/\x2econfig/fish/functions/fisher\x2efish\x1e\x7e/\x2econfig/fish/completions/fisher\x2efish
+SETUVAR _fisher_jorgebucaran_2F_hydro_files:\x7e/\x2econfig/fish/functions/fish_mode_prompt\x2efish\x1e\x7e/\x2econfig/fish/functions/fish_prompt\x2efish\x1e\x7e/\x2econfig/fish/conf\x2ed/hydro\x2efish
+SETUVAR _fisher_plugins:jorgebucaran/fisher\x1ejorgebucaran/hydro
+SETUVAR _fisher_upgraded_to_4_4:\x1d
+SETUVAR _hydro_git_1284:main\x20
+SETUVAR _hydro_git_178482:main\u2022\x20
+SETUVAR _hydro_git_25991:main\x20
+SETUVAR _hydro_git_332316:main\u2022\x20
+SETUVAR _hydro_git_402588:main\x20
+SETUVAR _hydro_git_41976:main\x20
+SETUVAR _hydro_git_492437:main\u2022\x20
+SETUVAR _hydro_git_506:main\x20
+SETUVAR _hydro_git_541861:main\x20\u21911\x20
+SETUVAR _hydro_git_572:main\u2022\x20
+SETUVAR _hydro_git_620:main\x20
+SETUVAR _hydro_git_630498:main\x20
+SETUVAR _hydro_git_632263:main\x20
+SETUVAR _hydro_git_703121:main\x20
+SETUVAR _hydro_git_72180:main\x20
+SETUVAR _hydro_git_772207:main\x20
+SETUVAR _hydro_git_772225:main\x20
+SETUVAR _hydro_git_772442:main\u2022\x20
+SETUVAR _hydro_git_798:main\x20
+SETUVAR _hydro_git_806611:cert\x2d1\x2e0\x2d18\u2022\x20
+SETUVAR _hydro_git_807317:main\x20\u21911\x20
+SETUVAR _hydro_git_858831:master\u2022\x20
+SETUVAR _hydro_git_866503:main\x20
+SETUVAR fish_greeting:
+SETUVAR fish_key_bindings:fish_default_key_bindings
+SETUVAR fish_user_paths:/home/necheporenko_s_iu/\x2elocal/bin\x1e/home/necheporenko_s_iu/\x2econfig/scripts\x1e/home/necheporenko_s_iu/\x2ecargo/bin

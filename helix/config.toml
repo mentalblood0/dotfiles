@@ -1,0 +1,42 @@
+theme = "modus_operandi_tinted"
+
+[editor]
+mouse = false
+scrolloff = 0
+cursorline = true
+cursorcolumn = true
+true-color = true
+gutters = []
+completion-timeout = 5
+auto-pairs = true
+
+[editor.inline-diagnostics]
+# cursor-line = "warning"
+# other-lines = "warning"
+
+[editor.soft-wrap]
+enable = true
+
+[editor.cursor-shape]
+insert = "bar"
+normal = "block"
+select = "underline"
+
+[editor.file-picker]
+hidden = false
+
+[keys.normal]
+S-j = "@jjjjj"
+S-k = "@kkkkk"
+"ш" = "@i"
+
+[keys.normal.space]
+w = ":update"
+"ц" = ":write"
+q = ":quit"
+m = ":bc!"
+
+[keys.insert]
+C-left = "@<esc>bi"
+C-right = "@<esc>wa"
+esc = ["normal_mode", ":update"]
