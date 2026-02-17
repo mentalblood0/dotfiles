@@ -1,0 +1,14 @@
+[general]
+import = ["C:/Users/Necheporenko_s_iu/AppData/Roaming/alacritty/themes/modus-operandi-tinted.toml"]
+
+[font]
+size=9
+normal={family="Fira Code", style="Regular"}
+
+[terminal.shell]
+program="C:\\Program Files\\PowerShell\\7\\pwsh"
+
+[[keyboard.bindings]]
+key = "LBracket"
+mods = "Control"
+chars = '\x1b'
