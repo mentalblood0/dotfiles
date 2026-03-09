@@ -1,16 +1,16 @@
-{ lib, pkgs, ... }: let
+{ lib, pkgs, ... }:
+let
   tmpFilesUserName = "mentalblood";
   tmpFilesUserGroup = "users";
+  tmpFilesHomeDir = "/home/${tmpFilesUserName}";
   mkTmpfile = type: content: {
     "${type}" = {
       user = "${tmpFilesUserName}";
       group = "${tmpFilesUserGroup}";
       mode = "1700";
-    } // lib.optionalAttrs (content != null) {
-      argument = 
-        if (type == "L+") 
-        then "${pkgs.writeScript "tmpfile-content" content}" 
-        else content;
+    }
+    // lib.optionalAttrs (content != null) {
+      argument = if (type == "L+") then "${pkgs.writeScript "tmpfile-content" content}" else content;
     };
   };
   dir = mkTmpfile "d" null;
@@ -23,7 +23,8 @@
     Value = true;
     Status = "locked";
   };
-in {
+in
+{
   imports = [
     ./hardware-configuration.nix
   ];
@@ -32,30 +33,31 @@ in {
     enable32Bit = true;
   };
   hardware.bluetooth.enable = true;
-  hardware.bluetooth.powerOnBoot = true; # Powers on default controller
+  hardware.bluetooth.powerOnBoot = true;
   system.copySystemConfiguration = true;
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
   boot.kernelPackages = pkgs.linuxPackages_latest;
   time.timeZone = "Europe/Moscow";
-  networking.hostName = "nixos"; # Define your hostname.
+  networking.hostName = "nixos";
   networking.networkmanager.enable = true;
   networking.firewall.allowedTCPPorts = [ 53317 ];
   networking.firewall.allowedUDPPorts = [ 53317 ];
-  # networking.proxy.default = "http://user:password@proxy:port/";
-  # networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
   i18n.defaultLocale = "en_US.UTF-8";
   users.users.mentalblood = {
     isNormalUser = true;
     description = "mentalblood";
-    extraGroups = [ "networkmanager" "wheel" ];
+    extraGroups = [
+      "networkmanager"
+      "wheel"
+    ];
   };
   systemd.tmpfiles.settings = {
-    "10-config" = {
-      "/home/mentalblood/.config" = dir;
+    "00-config" = {
+      "${tmpFilesHomeDir}/.config" = dir;
     };
     "10-tmux-config" = {
-      "/home/mentalblood/.tmux.conf" = link ''
+      "${tmpFilesHomeDir}/.tmux.conf" = link ''
         # remove delay after pressing ESC in helix
         set -sg escape-time 0
 
@@ -120,8 +122,8 @@ in {
       '';
     };
     "10-alacritty-config" = {
-      "/home/mentalblood/.config/alacritty" = dir;
-      "/home/mentalblood/.config/alacritty/alacritty.toml" = link ''
+      "${tmpFilesHomeDir}/.config/alacritty" = dir;
+      "${tmpFilesHomeDir}/.config/alacritty/alacritty.toml" = link ''
         [general]
         import = ["~/.config/alacritty/themes/modus-operandi-tinted.toml"]
 
@@ -132,8 +134,8 @@ in {
         [font]
         size = 11
       '';
-      "/home/mentalblood/.config/alacritty/themes" = dir;
-      "/home/mentalblood/.config/alacritty/themes/modus-operandi-tinted.toml" = link ''
+      "${tmpFilesHomeDir}/.config/alacritty/themes" = dir;
+      "${tmpFilesHomeDir}/.config/alacritty/themes/modus-operandi-tinted.toml" = link ''
         # Colors Modus-Operandi-Tinted
         [colors.normal]
         black = '#efe9dd'
@@ -165,8 +167,8 @@ in {
       '';
     };
     "10-fish-config" = {
-      "/home/mentalblood/.config/fish" = dir;
-      "/home/mentalblood/.config/fish/config.fish" = link ''
+      "${tmpFilesHomeDir}/.config/fish" = dir;
+      "${tmpFilesHomeDir}/.config/fish/config.fish" = link ''
         set -x TMPDIR /tmp/
         set fish_greeting ""
 
@@ -184,8 +186,8 @@ in {
       '';
     };
     "10-helix-config" = {
-      "/home/mentalblood/.config/helix" = dir;
-      "/home/mentalblood/.config/helix/config.toml" = link ''
+      "${tmpFilesHomeDir}/.config/helix" = dir;
+      "${tmpFilesHomeDir}/.config/helix/config.toml" = link ''
         theme = "modus_operandi_tinted"
 
         [editor]
@@ -225,10 +227,15 @@ in {
         C-right = "@<esc>wa"
         esc = ["normal_mode", ":update"]
       '';
-      "/home/mentalblood/.config/helix/languages.toml" = link ''
+      "${tmpFilesHomeDir}/.config/helix/languages.toml" = link ''
         [language-server.fs_watcher_lsp]
         command = "fs_watcher_lsp" # maybe use the path where it is installed
         args = []
+
+        [[language]]
+        name = "nix"
+        auto-format = true
+        formatter = { command = "nixfmt" }
 
         [[language]]
         name = "nim"
@@ -294,8 +301,8 @@ in {
       '';
     };
     "10-niri-config" = {
-      "/home/mentalblood/.config/niri" = dir;
-      "/home/mentalblood/.config/niri/config.kdl" = link ''
+      "${tmpFilesHomeDir}/.config/niri" = dir;
+      "${tmpFilesHomeDir}/.config/niri/config.kdl" = link ''
         input {
             keyboard {
                 repeat-delay 250
@@ -307,6 +314,11 @@ in {
             }
             warp-mouse-to-focus
             focus-follows-mouse
+        }
+        gestures {
+          hot-corners {
+            off
+          }
         }
         output "HKC OVERSEAS LIMITED Smart TV Unknown" {
             mode "3840x2160@60.000"
@@ -354,7 +366,16 @@ in {
             geometry-corner-radius 8
             clip-to-geometry true
         }
+        window-rule {
+            match is-focused=true
+            opacity 0.9
+        }
+        window-rule {
+            match is-focused=false
+            opacity 0.8
+        }
         binds {
+            Mod+C { spawn "pkill" "-SIGUSR2" "waybar"; }
             Mod+Return { spawn "alacritty"; }
             Mod+D { spawn "fuzzel" "--terminal" "alacritty -e"; }
             Super+Alt+L { spawn "swaylock"; }
@@ -426,9 +447,9 @@ in {
       '';
     };
     "10-nsxiv-config" = {
-      "/home/mentalblood/.config/nsxiv" = dir;
-      "/home/mentalblood/.config/nsxiv/exec" = dir;
-      "/home/mentalblood/.config/nsxiv/exec/key-handler" = link ''
+      "${tmpFilesHomeDir}/.config/nsxiv" = dir;
+      "${tmpFilesHomeDir}/.config/nsxiv/exec" = dir;
+      "${tmpFilesHomeDir}/.config/nsxiv/exec/key-handler" = link ''
         #! /usr/bin/env fish
 
         clear
@@ -460,8 +481,8 @@ in {
       '';
     };
     "10-zathura-config" = {
-      "/home/mentalblood/.config/zathura" = dir;
-      "/home/mentalblood/.config/zathura/zathurarc" = link ''
+      "${tmpFilesHomeDir}/.config/zathura" = dir;
+      "${tmpFilesHomeDir}/.config/zathura/zathurarc" = link ''
         set window-title-basename "true"
         set selection-clipboard "clipboard"
 
@@ -476,10 +497,11 @@ in {
       '';
     };
     "10-podcaster-config" = {
-      "/home/mentalblood/.config/podcaster" = dir;
-      "/home/mentalblood/.config/podcaster/bandcamp.yml" = link ''
+      "${tmpFilesHomeDir}/.config/podcaster" = dir;
+      "${tmpFilesHomeDir}/.config/podcaster/bandcamp.yml" = link ''
         parser:
           source: bandcamp
+          cache_dir: /mnt/merged/podcaster_cache
           # proxy: http://127.0.0.1:2080
           # only_cache: true
         downloader:
@@ -841,10 +863,11 @@ in {
           - artist: hypnoform
             chat: "-1002147495428"
       '';
-      "/home/mentalblood/.config/podcaster/youtube.yml" = link ''
+      "${tmpFilesHomeDir}/.config/podcaster/youtube.yml" = link ''
         log: info
         parser:
           source: youtube
+          cache_dir: /mnt/merged/podcaster_cache
           proxy: http://127.0.0.1:2080
           reversed: false
           # only_cache: true
@@ -910,10 +933,11 @@ in {
           - artist: "@LXSTCXNTURY555"
             chat: "-1002178712893"
       '';
-      "/home/mentalblood/.config/podcaster/philosophy_audio.yml" = link ''
+      "${tmpFilesHomeDir}/.config/podcaster/philosophy_audio.yml" = link ''
         log: info
         parser:
           source: youtube
+          cache_dir: /mnt/merged/podcaster_cache
           proxy: http://127.0.0.1:2080
           reversed: true
           # only_cache: true
@@ -1017,13 +1041,13 @@ in {
       '';
     };
     "10-scripts-config" = {
-      "/home/mentalblood/.config/scripts" = dir;
-      "/home/mentalblood/.config/scripts/rebuild-nixos-from-configuration.fish" = link ''
+      "${tmpFilesHomeDir}/.config/scripts" = dir;
+      "${tmpFilesHomeDir}/.config/scripts/rebuild-nixos-from-configuration.fish" = link ''
         #!/usr/bin/env fish
 
         sudo nixos-rebuild switch --upgrade --max-jobs 16 --cores 16
       '';
-      "/home/mentalblood/.config/scripts/alphabetically_sorted_images.fish" = link ''
+      "${tmpFilesHomeDir}/.config/scripts/alphabetically_sorted_images.fish" = link ''
         #!/usr/bin/env fish
 
         for arg in $argv
@@ -1031,7 +1055,7 @@ in {
             fd . "$cleaned_arg" --type f | sort | nsxiv -a -
         end
       '';
-      "/home/mentalblood/.config/scripts/newest_sorted_images.fish" = link ''
+      "${tmpFilesHomeDir}/.config/scripts/newest_sorted_images.fish" = link ''
         #!/usr/bin/env fish
 
         for arg in $argv
@@ -1039,17 +1063,17 @@ in {
             fd . "$cleaned_arg" --type f -X ls --full-time | sd '^([^ ]+ +){5}' \'\' | sort -r | sd '^[^/]+/' / | nsxiv -a -
         end
       '';
-      "/home/mentalblood/.config/scripts/noise.fish" = link ''
+      "${tmpFilesHomeDir}/.config/scripts/noise.fish" = link ''
         #!/usr/bin/env fish
 
         play -n synth brownnoise brownnoise channels 2
       '';
-      "/home/mentalblood/.config/scripts/nocolor.fish" = link ''
+      "${tmpFilesHomeDir}/.config/scripts/nocolor.fish" = link ''
         #!/usr/bin/env fish
 
         sed 's/\x1B[@A-Z\\\]^_]\|\x1B\[[0-9:;<=>?]*[-!"#$%&'"'"'()*+,.\/]*[][\\@A-Z^_`a-z{|}~]//g'
       '';
-      "/home/mentalblood/.config/scripts/upscale.fish" = link ''
+      "${tmpFilesHomeDir}/.config/scripts/upscale.fish" = link ''
         #!/usr/bin/env fish
 
         cd $argv[1]
@@ -1068,7 +1092,7 @@ in {
         mv upscaled/*.avif $argv[2]
         rm -f upscaled/*
       '';
-      "/home/mentalblood/.config/scripts/enumerate.fish" = link ''
+      "${tmpFilesHomeDir}/.config/scripts/enumerate.fish" = link ''
         #!/usr/bin/env fish
 
         set folder $argv[1]
@@ -1084,14 +1108,14 @@ in {
             end
         end
       '';
-      "/home/mentalblood/.config/scripts/urls_extract.fish" = link ''
+      "${tmpFilesHomeDir}/.config/scripts/urls_extract.fish" = link ''
         #!/usr/bin/env fish
 
         set INPUT $argv[1]
 
         cat $INPUT | rg -oP '"(http[^"]+posts\\/\\w+)(:?_small)(\\.\\w+)"' --replace '$1$3'
       '';
-      "/home/mentalblood/.config/scripts/command_monitor.fish" = link ''
+      "${tmpFilesHomeDir}/.config/scripts/command_monitor.fish" = link ''
         #!/usr/bin/env fish
 
         set -l INTERVAL $argv[1]
@@ -1103,7 +1127,7 @@ in {
             sleep $INTERVAL
         end
       '';
-      "/home/mentalblood/.config/scripts/service_monitor.fish" = link ''
+      "${tmpFilesHomeDir}/.config/scripts/service_monitor.fish" = link ''
         #!/usr/bin/env fish
 
         set SERVICE_NAME $argv[1]
@@ -1111,7 +1135,7 @@ in {
 
         watch -n $REFRESH_DELAY systemctl --user status $SERVICE_NAME.service $SERVICE_NAME.timer
       '';
-      "/home/mentalblood/.config/scripts/unzip_recursively.fish" = link ''
+      "${tmpFilesHomeDir}/.config/scripts/unzip_recursively.fish" = link ''
         #!/usr/bin/env fish
 
         set -q argv[2]; and set THREADS_COUNT $argv[2]; or set THREADS_COUNT (nproc)
@@ -1125,12 +1149,12 @@ in {
             unzip -o -q '"{}"' -d $TARGET_DIRECTORY && rm '{}'
         '
       '';
-      "/home/mentalblood/.config/scripts/stop_all_ollama_llms.fish" = link ''
+      "${tmpFilesHomeDir}/.config/scripts/stop_all_ollama_llms.fish" = link ''
         #!/usr/bin/env fish
 
         ollama ps | awk 'NR>1 {print $1}' | xargs -L 1 -I {} ollama stop {}
       '';
-      "/home/mentalblood/.config/scripts/download_from_urls_list.fish" = link ''
+      "${tmpFilesHomeDir}/.config/scripts/download_from_urls_list.fish" = link ''
         #!/usr/bin/env fish
 
         if test (count $argv) -ne 1
@@ -1188,7 +1212,7 @@ in {
         echo "Already existed: $filtered_count"
         echo "Total in list: $total"
       '';
-      "/home/mentalblood/.config/scripts/convert_to_avif_recursively.fish" = link ''
+      "${tmpFilesHomeDir}/.config/scripts/convert_to_avif_recursively.fish" = link ''
         #!/usr/bin/env fish
 
         # fd --type f -e png -e jpg -e jpeg '.*' $argv[1] -x detox '{}'
@@ -1200,8 +1224,8 @@ in {
       '';
     };
     "10-waybar-config" = {
-      "/home/mentalblood/.config/waybar" = dir;
-      "/home/mentalblood/.config/waybar/config.jsonc" = link ''
+      "${tmpFilesHomeDir}/.config/waybar" = dir;
+      "${tmpFilesHomeDir}/.config/waybar/config.jsonc" = link ''
         {
           "layer": "top",
           "position": "bottom",
@@ -1226,27 +1250,27 @@ in {
           "clock": {
             "interval": 1,
             "timezone": "Europe/Moscow",
-            "format": "{:%I:%M:%S %d.%m.%Y}",
+            "format": "{:%H:%M:%S %d.%m.%Y}",
           },
           "cpu": {
             "interval": 1,
-            "format": "{usage:3}%",
+            "format": " {usage:3}%",
           },
           "memory": {
             "interval": 1,
-            "format": " {used:5.2f}GB / {total:4.1f}GB",
+            "format": "  {used:5.2f}GB / {total:4.1f}GB",
           },
           "disk#1": {
             "interval": 1,
-            "format": " {used:5} / {total:5}",
+            "format": " {used:8} / {total:8}",
           },
           "disk#2": {
             "interval": 1,
-            "format": " {used:5} / {total:5}",
+            "format": " {used:8} / {total:7}",
             "path": "/mnt/merged"
           },
           "pulseaudio": {
-            "format": " {volume:3}%",
+            "format": "  {volume:3}%",
             "format-muted": " {volume:3}%",
           },
           "network": {
@@ -1255,12 +1279,12 @@ in {
           },
         }
       '';
-      "/home/mentalblood/.config/waybar/style.css" = link ''
+      "${tmpFilesHomeDir}/.config/waybar/style.css" = link ''
         @import "./colors.css";
 
         * {
           border: none;
-          font-family: "Monospace";
+          font-family: "JetbrainsMono Nerd Font";
           font-size: 18px;
         }
         window#waybar {
@@ -1324,15 +1348,23 @@ in {
   services.ollama = {
     enable = true;
     package = pkgs.ollama-rocm;
+    acceleration = "rocm";
+    loadModels = [
+      "mirage335/Llama-3-NeuralDaredevil-8B-abliterated-virtuoso"
+      "huihui_ai/homunculus-abliterated:12b"
+    ];
   };
   systemd.user.services.podcaster = {
     description = "upload audio from youtube and bandcamp to telegram";
     serviceConfig = {
-      Type = "oneshot";
-      ExecStart = "/home/mentalblood/.local/bin/podcaster philosophy_audio youtube bandcamp";
+      Type = "simple";
+      ExecStart = "${tmpFilesHomeDir}/.local/bin/podcaster philosophy_audio youtube bandcamp";
       User = "mentalblood";
     };
-    path = with pkgs; [ yt-dlp ffmpeg ];
+    path = with pkgs; [
+      yt-dlp
+      ffmpeg
+    ];
     wantedBy = [ "default.target" ];
   };
   systemd.user.timers.podcaster = {
@@ -1357,7 +1389,7 @@ in {
         Mode = "manual";
         HTTPProxy = "127.0.0.1:2080";
         SSLProxy = "127.0.0.1:2080";
-        NoProxy = "";
+        NoProxy = "www.reddit.com";
       };
       DisableTelemetry = true;
       DisableFirefoxStudies = true;
@@ -1388,8 +1420,11 @@ in {
           installation_mode = "force_installed";
         };
       };
-      Preferences = { 
-        "browser.contentblocking.category" = { Value = "strict"; Status = "locked"; };
+      Preferences = {
+        "browser.contentblocking.category" = {
+          Value = "strict";
+          Status = "locked";
+        };
         "extensions.pocket.enabled" = lock-false;
         "extensions.screenshots.disabled" = lock-true;
         "browser.topsites.contile.enabled" = lock-false;
@@ -1468,7 +1503,6 @@ in {
   nixpkgs.config.allowUnfree = true;
   environment.systemPackages = with pkgs; [
     helix
-    cargo
     waybar
     duf
     dust
@@ -1499,6 +1533,7 @@ in {
     syncthing
     nixfmt
     rust-analyzer
+    rustup
     fish-lsp
     superhtml
     markdown-oxide
@@ -1517,10 +1552,13 @@ in {
     detox
     chromium
     xwayland-satellite
+    parallel
+    unzip
+    libavif
   ];
   fonts.packages = with pkgs; [
     nerd-fonts.symbols-only
+    nerd-fonts.jetbrains-mono
   ];
   system.stateVersion = "25.11";
 }
-
