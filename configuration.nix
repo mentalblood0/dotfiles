@@ -39,10 +39,36 @@ in
   boot.loader.efi.canTouchEfiVariables = true;
   boot.kernelPackages = pkgs.linuxPackages_latest;
   time.timeZone = "Europe/Moscow";
-  networking.hostName = "nixos";
-  networking.networkmanager.enable = true;
-  networking.firewall.allowedTCPPorts = [ 53317 ];
-  networking.firewall.allowedUDPPorts = [ 53317 ];
+  networking = {
+    hostName = "nixos";
+    networkmanager.enable = true;
+    firewall = {
+      allowedTCPPorts = [
+        42000
+        42001
+      ];
+      allowedUDPPorts = [
+        42000
+        42001
+      ];
+      allowedUDPPortRanges = [
+        {
+          from = 5353;
+          to = 5353;
+        }
+      ];
+    };
+    bridges."ollama_net".interfaces = [ ];
+    interfaces."ollama_net" = {
+      virtual = true;
+      ipv4.addresses = [
+        {
+          address = "10.0.0.1";
+          prefixLength = 24;
+        }
+      ];
+    };
+  };
   i18n.defaultLocale = "en_US.UTF-8";
   users.users.mentalblood = {
     isNormalUser = true;
@@ -238,11 +264,6 @@ in
         formatter = { command = "nixfmt" }
 
         [[language]]
-        name = "nim"
-        auto-format = true
-        formatter = { command = "nph", args = ["-"] }
-
-        [[language]]
         name = "toml"
         auto-format = true
         formatter = { command = "taplo", args = ["fmt", "-"] }
@@ -288,11 +309,6 @@ in
           "--no-msbuild-check",
           "--fast",
         ] }
-
-        [[language]]
-        name = "bash"
-        auto-format = true
-        formatter = { command = "shfmt" }
 
         [[language]]
         name = "javascript"
@@ -1244,7 +1260,9 @@ in
             "pulseaudio",
             "cpu",
             "memory",
-            "network",
+            "network#1",
+            "network#2",
+            "network#3",
             "clock",
           ],
           "clock": {
@@ -1273,7 +1291,19 @@ in
             "format": "  {volume:3}%",
             "format-muted": " {volume:3}%",
           },
-          "network": {
+          "network#1": {
+            "interval": 1,
+            "format": " {bandwidthDownBytes}",
+            "min-length": 11,
+            "justify": "left"
+          },
+          "network#2": {
+            "interval": 1,
+            "format": " {bandwidthUpBytes}",
+            "min-length": 11,
+            "justify": "left"
+          },
+          "network#3": {
             "interval": 1,
             "format": "{ifname} {ipaddr}",
           },
@@ -1336,23 +1366,20 @@ in
         #memory {
           background: linear-gradient(90deg, @color_5, @color_6);
         }
-        #network {
+        #network.1 {
           background: linear-gradient(90deg, @color_6, @color_7);
         }
-        #clock {
+        #network.2 {
           background: linear-gradient(90deg, @color_7, @color_8);
+        }
+        #network.3 {
+          background: linear-gradient(90deg, @color_8, @color_9);
+        }
+        #clock {
+          background: linear-gradient(90deg, @color_9, @color_10);
         }
       '';
     };
-  };
-  services.ollama = {
-    enable = true;
-    package = pkgs.ollama-rocm;
-    acceleration = "rocm";
-    loadModels = [
-      "mirage335/Llama-3-NeuralDaredevil-8B-abliterated-virtuoso"
-      "huihui_ai/homunculus-abliterated:12b"
-    ];
   };
   systemd.user.services.podcaster = {
     description = "upload audio from youtube and bandcamp to telegram";
@@ -1380,6 +1407,34 @@ in
   programs.fish.enable = true;
   programs.niri.enable = true;
   programs.xwayland.enable = true;
+  programs.steam.enable = true;
+  programs.firejail = {
+    enable = true;
+    wrappedBinaries = {
+      firefox = {
+        executable = "${pkgs.firefox}/bin/firefox";
+        profile = "${pkgs.firejail}/etc/firejail/firefox.profile";
+        extraArgs = [
+          "--private=~/jails/firefox"
+        ];
+      };
+      steam = {
+        executable = "${pkgs.steam}/bin/steam";
+        profile = "${pkgs.firejail}/etc/firejail/steam.profile";
+        extraArgs = [
+          "--private=~/jails/steam"
+        ];
+      };
+      ollama = {
+        executable = "${pkgs.ollama}/bin/ollama";
+        extraArgs = [
+          "--private=~/jails/ollama"
+          "--net=ollama_net"
+          "--ip=10.0.0.2"
+        ];
+      };
+    };
+  };
   programs.firefox = {
     enable = true;
     languagePacks = [ "en-US" ];
@@ -1510,14 +1565,11 @@ in
     mergerfs-tools
     alacritty
     fuzzel
-    nim
-    nimble
     crystal
     shards
     pulseaudio
     pulsemixer
     cmus
-    swaylock
     zathura
     throne
     bottom
@@ -1525,12 +1577,10 @@ in
     git
     mpv
     nsxiv
-    steam
     bluetui
-    localsend
+    warpinator
     yazi
     qbittorrent
-    syncthing
     nixfmt
     rust-analyzer
     rustup
@@ -1538,7 +1588,6 @@ in
     superhtml
     markdown-oxide
     nixd
-    ty
     taplo
     tmux
     ffmpeg
@@ -1555,6 +1604,9 @@ in
     parallel
     unzip
     libavif
+    playerctl
+    ollama-rocm
+    iptables
   ];
   fonts.packages = with pkgs; [
     nerd-fonts.symbols-only
