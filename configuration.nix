@@ -23,6 +23,10 @@ let
     Value = true;
     Status = "locked";
   };
+  ollamaBin = "${pkgs.ollama}/bin/ollama";
+  ollama-wrapper-script = pkgs.writeShellScriptBin "ollama-wrapper-script" ''
+    exec ${ollamaBin} "$@"
+  '';
 in
 {
   imports = [
@@ -918,10 +922,6 @@ in
             chat: "-1002174448789"
           - artist: "@Panicmusic84"
             chat: "-1003221300730"
-          - artist: "@WookashPodcast"
-            chat: "-1002986588161"
-          # - artist: "@NextW"
-          #   chat: "-1002901199389"
           - artist: "playlist?list=PLl6BRvEJ-auZ5aYPHj1B3pKJ_pLjg9qNU"
             chat: "-1002585937030"
           - artist: "@OBSIDIANSOUNDFIELDS"
@@ -974,6 +974,14 @@ in
             ip: 127.0.0.1
             port: 2080
         tasks:
+          - artist: "@WookashPodcast"
+            chat: "-1002986588161"
+          # - artist: "@NextW"
+          #   chat: "-1002901199389"
+          - artist: "@theoryaudiobooks9635"
+            chat: "-1002510618083"
+          - artist: "@Logaudiobooks"
+            chat: "-1002510618083"
           - artist: "@Формальнаяфилософия"
             chat: "-1002744719988"
           - artist: "channel/UC3xY0O0R2zJ-v2tzreg1lLA"
@@ -1426,11 +1434,23 @@ in
         ];
       };
       ollama = {
-        executable = "${pkgs.ollama}/bin/ollama";
+        executable = "${pkgs.ollama-rocm}/bin/ollama";
         extraArgs = [
-          "--private=~/jails/ollama"
+          "--private=/mnt/merged/jails/ollama"
           "--net=ollama_net"
           "--ip=10.0.0.2"
+        ];
+      };
+      ollama-with-internet-access = {
+        executable = "${ollama-wrapper-script}/bin/ollama-wrapper-script";
+        extraArgs = [
+          "--private=/mnt/merged/jails/ollama_with_internet_access"
+        ];
+      };
+      hf = {
+        executable = "${pkgs.python3Packages.huggingface-hub}/bin/hf";
+        extraArgs = [
+          "--private=/mnt/merged/jails/huggingface-hub"
         ];
       };
     };
@@ -1607,6 +1627,7 @@ in
     playerctl
     ollama-rocm
     iptables
+    python3Packages.huggingface-hub
   ];
   fonts.packages = with pkgs; [
     nerd-fonts.symbols-only
