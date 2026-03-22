@@ -536,6 +536,8 @@ in
             ip: 127.0.0.1
             port: 2080
         tasks:
+          - artist: captainjazz
+            chat: "-1003882948696"
           - artist: sharptonerecords
             chat: "-1003428904107"
           - artist: theplotinyou
@@ -974,6 +976,8 @@ in
             ip: 127.0.0.1
             port: 2080
         tasks:
+          - artist: "@nekrasovkalibrary"
+            chat: "-1003870179768"
           - artist: "@WookashPodcast"
             chat: "-1002986588161"
           # - artist: "@NextW"
@@ -1097,6 +1101,15 @@ in
 
         sed 's/\x1B[@A-Z\\\]^_]\|\x1B\[[0-9:;<=>?]*[-!"#$%&'"'"'()*+,.\/]*[][\\@A-Z^_`a-z{|}~]//g'
       '';
+      "${tmpFilesHomeDir}/.config/scripts/convert_to_avif_recursively.bash" = link ''
+        #!/usr/bin/env bash
+
+        # fd --type f -e png -e jpg -e jpeg '.*' "$1" -x detox '{}'
+
+        fd --type f -e png -e jpg -e jpeg '.*' "$1" | parallel --jobs 0 --bar '
+            avifenc -j 16 -q 75 --speed 6 "{}" "{.}.avif" > /dev/null && rm "{}"
+        '
+      '';
       "${tmpFilesHomeDir}/.config/scripts/upscale.fish" = link ''
         #!/usr/bin/env fish
 
@@ -1132,12 +1145,10 @@ in
             end
         end
       '';
-      "${tmpFilesHomeDir}/.config/scripts/urls_extract.fish" = link ''
-        #!/usr/bin/env fish
+      "${tmpFilesHomeDir}/.config/scripts/urls_extract.bash" = link ''
+        #!/usr/bin/env bash
 
-        set INPUT $argv[1]
-
-        cat $INPUT | rg -oP '"(http[^"]+posts\\/\\w+)(:?_small)(\\.\\w+)"' --replace '$1$3'
+        rg -oP "(http[^\"]+posts\\/\\w+)(:?_small)(\\.\\w+)" --replace '$1$3' < "$1"
       '';
       "${tmpFilesHomeDir}/.config/scripts/command_monitor.fish" = link ''
         #!/usr/bin/env fish
@@ -1159,18 +1170,17 @@ in
 
         watch -n $REFRESH_DELAY systemctl --user status $SERVICE_NAME.service $SERVICE_NAME.timer
       '';
-      "${tmpFilesHomeDir}/.config/scripts/unzip_recursively.fish" = link ''
-        #!/usr/bin/env fish
+      "${tmpFilesHomeDir}/.config/scripts/unzip_recursively.bash" = link ''
+        #!/usr/bin/env bash
 
-        set -q argv[2]; and set THREADS_COUNT $argv[2]; or set THREADS_COUNT (nproc)
+        fd -e zip '.*' "$1" -x detox '{}'
 
-        fd -e zip '.*' $argv[1] -x detox '{}'
-
-        fd -e zip '.*' $argv[1] | parallel -j $THREADS_COUNT '
-            set TARGET_DIRECTORY (string replace -i -r "\.zip\$" "" {})
-            echo "{}"
-            mkdir -p $TARGET_DIRECTORY
-            unzip -o -q '"{}"' -d $TARGET_DIRECTORY && rm '{}'
+        fd -e zip '.*' "$1" | parallel --jobs 0 --bar '
+            file="{}"
+            target="''${file%.zip}"
+            echo "$file"
+            mkdir -p "$target"
+            unzip -o -q "$file" -d "$target" && rm "$file"
         '
       '';
       "${tmpFilesHomeDir}/.config/scripts/stop_all_ollama_llms.fish" = link ''
@@ -1178,73 +1188,70 @@ in
 
         ollama ps | awk 'NR>1 {print $1}' | xargs -L 1 -I {} ollama stop {}
       '';
-      "${tmpFilesHomeDir}/.config/scripts/download_from_urls_list.fish" = link ''
-        #!/usr/bin/env fish
+      "${tmpFilesHomeDir}/.config/scripts/thumbnails_create.bash" = link ''
+        #!/usr/bin/env bash
 
-        if test (count $argv) -ne 1
-            echo "Usage: download_from_urls_list.fish <urls_file>"
+        set -o nounset
+        # set -o errexit
+
+        source_root="$1"
+        target_root="$2"
+
+        if [ ! -d "$source_root" ]; then
+            echo "Error: Source directory '$source_root' does not exist."
             exit 1
-        end
+        fi
 
-        set url_file $argv[1]
+        source_root=$(realpath "$source_root")
+        target_root=$(realpath "$target_root")
 
-        if not test -f $url_file
-            echo "Error: File '$url_file' not found"
-            exit 1
-        end
+        process_file() {
+            local file="$1"
+            local target_root="$2"
 
-        set urls (cat $url_file)
-        set total (count $urls)
+            local output_relative_dir=$(dirname "$file")
 
-        set existing_bases
-        for file in *
-            if test -f "$file"
-                set file_base (string replace -r '\.[^.]*$' \'\' "$file")
-                set existing_bases $existing_bases "$file_base"
-            end
-        end
+            local filename=$(basename "$file")
+            local filename_without_extension="''${filename%.*}"
+            local output_file_with_jpeg_extension="$target_root$output_relative_dir/$filename_without_extension.jpg"
+            local output_file="$target_root$file"
 
-        set urls_to_download
-        set filtered_count 0
+            mkdir -p "$target_root$output_relative_dir"
+            ffmpeg -v quiet -i "$file" -vf "scale='if(gt(a,1),160,-1)':'if(gt(a,1),-1,160)'" "$output_file_with_jpeg_extension"
+            mv "$output_file_with_jpeg_extension" "$output_file"
+            touch -r "$file" "$output_file"
+        }
 
-        for url in $urls
-            set filename (basename $url)
-            set base_name (string replace -r '\.[^.]*$' \'\' $filename)
+        export -f process_file
 
-            if contains -- "$base_name" $existing_bases
-                set filtered_count (math $filtered_count + 1)
-            else
-                set urls_to_download $urls_to_download "$url"
-            end
-        end
-
-        set to_download (count $urls_to_download)
-        set downloaded 0
-
-        for i in (seq $to_download)
-            clear
-            echo "$downloaded/$to_download $url"
-
-            set url $urls_to_download[$i]
-            if curl -L -O -C - "$url"
-                set downloaded (math $downloaded + 1)
-            end
-        end
-
-        clear
-        echo "Downloaded: $downloaded/$to_download"
-        echo "Already existed: $filtered_count"
-        echo "Total in list: $total"
+        fd -t f -e avif . "$source_root" | while IFS= read -r file; do
+            if [ ! -e "$target_root$file" ]; then
+                echo "$file"
+            fi
+        done | parallel --jobs 0 --bar process_file {} "$target_root"
       '';
-      "${tmpFilesHomeDir}/.config/scripts/convert_to_avif_recursively.fish" = link ''
-        #!/usr/bin/env fish
+      "${tmpFilesHomeDir}/.config/scripts/download_from_urls_list.bash" = link ''
+        #!/usr/bin/env bash
 
-        # fd --type f -e png -e jpg -e jpeg '.*' $argv[1] -x detox '{}'
+        set -o nounset
 
-        fd --type f -e png -e jpg -e jpeg '.*' $argv[1] | parallel -j $argv[2] '
-            echo '{}'
-            avifenc -j 16 -q 75 --speed 6 '{}' '{.}.avif' > /dev/null && rm '{}'
-        '
+        url_file="$1"
+
+        mapfile -t urls < "$url_file"
+
+        download_one() {
+            local url="$1"
+            filename=$(basename "$url")
+            if [ ! -e "$filename" ]; then
+              curl -L -O -C - "$url" > /dev/null 2>&1
+              return $?
+            else
+              return 0
+            fi
+        }
+        export -f download_one
+
+        parallel --bar download_one {} ::: "''${urls[@]}"
       '';
     };
     "10-waybar-config" = {
@@ -1596,7 +1603,6 @@ in
     gh
     git
     mpv
-    nsxiv
     bluetui
     warpinator
     yazi
@@ -1628,6 +1634,17 @@ in
     ollama-rocm
     iptables
     python3Packages.huggingface-hub
+    bash-language-server
+    nushell
+    (pkgs.symlinkJoin {
+      name = "nsxiv";
+      paths = [ pkgs.nsxiv ];
+      buildInputs = [ pkgs.makeWrapper ];
+      postBuild = ''
+        wrapProgram $out/bin/nsxiv \
+          --run 'export XDG_CACHE_HOME="/mnt/merged/.cache/"'
+      '';
+    })
   ];
   fonts.packages = with pkgs; [
     nerd-fonts.symbols-only
