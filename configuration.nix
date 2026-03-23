@@ -1104,11 +1104,24 @@ in
       "${tmpFilesHomeDir}/.config/scripts/convert_to_avif_recursively.bash" = link ''
         #!/usr/bin/env bash
 
+        set -o nounset
+
+        ulimit -n `ulimit -Hn`
+
         # fd --type f -e png -e jpg -e jpeg '.*' "$1" -x detox '{}'
 
-        fd --type f -e png -e jpg -e jpeg '.*' "$1" | parallel --jobs 0 --bar '
-            avifenc -j 16 -q 75 --speed 6 "{}" "{.}.avif" > /dev/null && rm "{}"
-        '
+        process_file() {
+          file="$1"
+          output_file="''${file%.*}.avif"
+          if [ ! -e "$output_file" ]; then
+            avifenc -q 75 --speed 6 "$file" "$output_file" > /dev/null && rm "$file" 
+          else
+            rm "$file"
+          fi
+        }
+        export -f process_file
+
+        fd --type f -e png -e jpg -e jpeg '.*' "$1" | parallel --jobs "$2" --bar process_file {}
       '';
       "${tmpFilesHomeDir}/.config/scripts/upscale.fish" = link ''
         #!/usr/bin/env fish
@@ -1173,15 +1186,17 @@ in
       "${tmpFilesHomeDir}/.config/scripts/unzip_recursively.bash" = link ''
         #!/usr/bin/env bash
 
-        fd -e zip '.*' "$1" -x detox '{}'
+        # fd -e zip '.*' "$1" -x detox '{}'
 
-        fd -e zip '.*' "$1" | parallel --jobs 0 --bar '
-            file="{}"
-            target="''${file%.zip}"
-            echo "$file"
+        process_file() {
+            file="$1"
+            target="''${file%.*}"
             mkdir -p "$target"
             unzip -o -q "$file" -d "$target" && rm "$file"
-        '
+        }
+        export -f process_file
+
+        fd -e zip '.*' "$1" | parallel --bar --jobs 8 process_file {}
       '';
       "${tmpFilesHomeDir}/.config/scripts/stop_all_ollama_llms.fish" = link ''
         #!/usr/bin/env fish
@@ -1460,6 +1475,12 @@ in
           "--private=/mnt/merged/jails/huggingface-hub"
         ];
       };
+      telegram-desktop = {
+        executable = "${pkgs.python3Packages.huggingface-hub}/bin/hf";
+        extraArgs = [
+          "--private=/mnt/merged/jails/telegram-desktop"
+        ];
+      };
     };
   };
   programs.firefox = {
@@ -1635,7 +1656,7 @@ in
     iptables
     python3Packages.huggingface-hub
     bash-language-server
-    nushell
+    telegram-desktop
     (pkgs.symlinkJoin {
       name = "nsxiv";
       paths = [ pkgs.nsxiv ];
