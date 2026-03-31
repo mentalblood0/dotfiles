@@ -1108,20 +1108,27 @@ in
 
         ulimit -n `ulimit -Hn`
 
-        # fd --type f -e png -e jpg -e jpeg '.*' "$1" -x detox '{}'
+        # fd --type f -e png -e jpg -jpeg '.*' "$1" -x detox '{}'
 
         process_file() {
           file="$1"
+          shift  # Remove the file argument, leaving only avifenc options
           output_file="''${file%.*}.avif"
           if [ ! -e "$output_file" ]; then
-            avifenc -q 75 --speed 6 "$file" "$output_file" > /dev/null && rm "$file" 
+            avifenc -q 75 --speed 6 "$@" "$file" "$output_file" > /dev/null && rm "$file"
           else
             rm "$file"
           fi
         }
         export -f process_file
 
-        fd --type f -e png -e jpg -e jpeg '.*' "$1" | parallel --jobs "$2" --bar process_file {}
+        # Collect additional arguments (everything after the first two required args)
+        additional_args=()
+        if [ $# -gt 2 ]; then
+          additional_args=("''${@:3}")
+        fi
+
+        fd --type f -e png -e jpg -e jpeg '.*' "$1" | sort | parallel --jobs "$2" --bar process_file {} "''${additional_args[@]}"
       '';
       "${tmpFilesHomeDir}/.config/scripts/upscale.fish" = link ''
         #!/usr/bin/env fish
@@ -1196,7 +1203,7 @@ in
         }
         export -f process_file
 
-        fd -e zip '.*' "$1" | parallel --bar --jobs 8 process_file {}
+        fd -e zip '.*' "$1" | sort | parallel --bar --jobs "$2" process_file {}
       '';
       "${tmpFilesHomeDir}/.config/scripts/stop_all_ollama_llms.fish" = link ''
         #!/usr/bin/env fish
@@ -1232,7 +1239,7 @@ in
             local output_file="$target_root$file"
 
             mkdir -p "$target_root$output_relative_dir"
-            ffmpeg -v quiet -i "$file" -vf "scale='if(gt(a,1),160,-1)':'if(gt(a,1),-1,160)'" "$output_file_with_jpeg_extension"
+            ffmpeg -y -v quiet -i "$file" -vf "scale='if(gt(a,1),160,-1)':'if(gt(a,1),-1,160)'" "$output_file_with_jpeg_extension"
             mv "$output_file_with_jpeg_extension" "$output_file"
             touch -r "$file" "$output_file"
         }
@@ -1243,7 +1250,7 @@ in
             if [ ! -e "$target_root$file" ]; then
                 echo "$file"
             fi
-        done | parallel --jobs 0 --bar process_file {} "$target_root"
+        done | sort | parallel --jobs "$3" --bar process_file {} "$target_root"
       '';
       "${tmpFilesHomeDir}/.config/scripts/download_from_urls_list.bash" = link ''
         #!/usr/bin/env bash
@@ -1434,7 +1441,10 @@ in
     wantedBy = [ "timers.target" ];
     enable = true;
   };
-  programs.fish.enable = true;
+  programs.fish = {
+    enable = true;
+    generateCompletions = false;
+  };
   programs.niri.enable = true;
   programs.xwayland.enable = true;
   programs.steam.enable = true;
@@ -1475,8 +1485,8 @@ in
           "--private=/mnt/merged/jails/huggingface-hub"
         ];
       };
-      telegram-desktop = {
-        executable = "${pkgs.python3Packages.huggingface-hub}/bin/hf";
+      Telegram = {
+        executable = "${pkgs.telegram-desktop}/bin/Telegram";
         extraArgs = [
           "--private=/mnt/merged/jails/telegram-desktop"
         ];
@@ -1657,6 +1667,8 @@ in
     python3Packages.huggingface-hub
     bash-language-server
     telegram-desktop
+    wine
+    _7zz
     (pkgs.symlinkJoin {
       name = "nsxiv";
       paths = [ pkgs.nsxiv ];
