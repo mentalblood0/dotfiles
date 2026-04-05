@@ -1231,16 +1231,14 @@ in
             local file="$1"
             local target_root="$2"
 
-            local output_relative_dir=$(dirname "$file")
 
             local filename=$(basename "$file")
-            local filename_without_extension="''${filename%.*}"
-            local output_file_with_jpeg_extension="$target_root$output_relative_dir/$filename_without_extension.jpg"
             local output_file="$target_root$file"
 
+            local output_relative_dir=$(dirname "$file")
             mkdir -p "$target_root$output_relative_dir"
-            ffmpeg -y -v quiet -i "$file" -vf "scale='if(gt(a,1),160,-1)':'if(gt(a,1),-1,160)'" "$output_file_with_jpeg_extension"
-            mv "$output_file_with_jpeg_extension" "$output_file"
+
+            ffmpeg -y -v quiet -i "$file" -vf "scale='if(gt(a,1),160,-1)':'if(gt(a,1),-1,160)'" "$output_file"
             touch -r "$file" "$output_file"
         }
 
