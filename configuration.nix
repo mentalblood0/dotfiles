@@ -32,12 +32,17 @@ in
   imports = [
     ./hardware-configuration.nix
   ];
-  hardware.graphics = {
-    enable = true;
-    enable32Bit = true;
+  hardware = {
+    graphics = {
+      enable = true;
+      enable32Bit = true;
+    };
+    bluetooth = {
+      enable = true;
+      powerOnBoot = true;
+    };
+    keyboard.qmk.enable = true;
   };
-  hardware.bluetooth.enable = true;
-  hardware.bluetooth.powerOnBoot = true;
   system.copySystemConfiguration = true;
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
@@ -50,10 +55,14 @@ in
       allowedTCPPorts = [
         42000
         42001
+        4533
+        2234
       ];
       allowedUDPPorts = [
         42000
         42001
+        4533
+        2234
       ];
       allowedUDPPortRanges = [
         {
@@ -382,6 +391,12 @@ in
             match namespace="^swww-daemon$"
             place-within-backdrop true
         }
+        // window-rule {
+            // background-effect {
+                // blur true
+                // saturation 0.8 
+            // }
+        // }
         window-rule {
             geometry-corner-radius 8
             clip-to-geometry true
@@ -536,6 +551,18 @@ in
             ip: 127.0.0.1
             port: 2080
         tasks:
+          - artist: oddbehavior
+            chat: "-1003832515528"
+          - artist: jehnnybeth
+            chat: "-1003953161452"
+          - artist: panicworks
+            chat: "-1003911155413"
+          - artist: lostfrog
+            chat: "-1003967571675"
+          - artist: kufrecords
+            chat: "-1003978574706"
+          - artist: ab-sounds
+            chat: "-1003876376633"
           - artist: captainjazz
             chat: "-1003882948696"
           - artist: sharptonerecords
@@ -570,8 +597,8 @@ in
             chat: "-1002845456656"
           - artist: churchofthetenhorns
             chat: "-1003038332038"
-          - artist: natecollins
-            chat: "-1002732866860"
+          # - artist: natecollins
+          #   chat: "-1002732866860"
           - artist: angeloftheveil
             chat: "-1003024384128"
           - artist: EXOBASE
@@ -838,8 +865,8 @@ in
             chat: "-1002245855930"
           - artist: sentientruin
             chat: "-1002212937886"
-          - artist: genomrecords
-            chat: "-1002187898171"
+          # - artist: genomrecords
+          #   chat: "-1002187898171"
           - artist: ghostfailure
             chat: "-1002165235912"
           - artist: nuclearblast
@@ -1271,7 +1298,7 @@ in
         }
         export -f download_one
 
-        parallel --bar download_one {} ::: "''${urls[@]}"
+        parallel --bar --jobs "$2" download_one {} ::: "''${urls[@]}"
       '';
     };
     "10-waybar-config" = {
@@ -1416,6 +1443,20 @@ in
       '';
     };
   };
+  services.navidrome = {
+    enable = true;
+    settings.MusicFolder = "/mnt/merged/music";
+    settings.EnableSharing = true;
+    openFirewall = true;
+    settings = {
+      Port = 4533;
+      Address = "0.0.0.0";
+    };
+  };
+  services.udev.packages = with pkgs; [
+    via
+    qmk-udev-rules
+  ];
   systemd.user.services.podcaster = {
     description = "upload audio from youtube and bandcamp to telegram";
     serviceConfig = {
@@ -1487,6 +1528,12 @@ in
         executable = "${pkgs.telegram-desktop}/bin/Telegram";
         extraArgs = [
           "--private=/mnt/merged/jails/telegram-desktop"
+        ];
+      };
+      tuna = {
+        executable = "/usr/bin/tuna";
+        extraArgs = [
+          "--private=/mnt/merged/jails/tuna"
         ];
       };
     };
@@ -1640,7 +1687,7 @@ in
     rust-analyzer
     rustup
     fish-lsp
-    superhtml
+    vscode-langservers-extracted
     markdown-oxide
     nixd
     taplo
@@ -1658,6 +1705,7 @@ in
     xwayland-satellite
     parallel
     unzip
+    dioxus-cli
     libavif
     playerctl
     ollama-rocm
@@ -1667,6 +1715,13 @@ in
     telegram-desktop
     wine
     _7zz
+    graphviz
+    dot-language-server
+    via
+    vial
+    cloudflared
+    feishin
+    easytag
     (pkgs.symlinkJoin {
       name = "nsxiv";
       paths = [ pkgs.nsxiv ];
