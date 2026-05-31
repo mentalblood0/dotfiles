@@ -32,6 +32,15 @@ in
   imports = [
     ./hardware-configuration.nix
   ];
+  nix.settings = {
+    # substituters = [
+    #   "https://cache.nixos.org"
+    #   "https://aseipp-nix-cache.global.ssl.fastly.net"
+    # ];
+    # stalled-download-timeout = 5;
+    download-attempts = 1;
+    connect-timeout = 2;
+  };
   hardware = {
     graphics = {
       enable = true;
@@ -51,6 +60,14 @@ in
   networking = {
     hostName = "nixos";
     networkmanager.enable = true;
+    nameservers = [
+      "1.1.1.1"
+      "1.0.0.1"
+    ];
+    # proxy = {
+    #   default = "http://127.0.0.1:2080";
+    #   noProxy = "127.0.0.1,localhost,internal.domain";
+    # };
     firewall = {
       allowedTCPPorts = [
         42000
@@ -298,7 +315,7 @@ in
 
         [[language]]
         name = "rust"
-        formatter = { command = "rustfmt", args = ["--config", "format_strings=true"] }
+        formatter = { command = "rustfmt", args = ["--config", "format_strings=true", "--edition", "2024"] }
         auto-format = true
 
         [language.auto-pairs]
@@ -378,7 +395,7 @@ in
         }
         spawn-at-startup "waybar"
         spawn-at-startup "throne"
-        spawn-at-startup "swww-daemon"
+        spawn-at-startup "awww-daemon"
         hotkey-overlay {
             skip-at-startup
         }
@@ -388,26 +405,25 @@ in
             slowdown 1.0
         }
         layer-rule {
-            match namespace="^swww-daemon$"
+            match namespace="^awww-daemon$"
             place-within-backdrop true
         }
-        // window-rule {
-            // background-effect {
-                // blur true
-                // saturation 0.8 
-            // }
-        // }
         window-rule {
+            background-effect {
+                blur true
+                saturation 0.8 
+            }
+            draw-border-with-background false
             geometry-corner-radius 8
             clip-to-geometry true
         }
         window-rule {
             match is-focused=true
-            opacity 0.9
+            opacity 0.84
         }
         window-rule {
             match is-focused=false
-            opacity 0.8
+            opacity 0.7
         }
         binds {
             Mod+C { spawn "pkill" "-SIGUSR2" "waybar"; }
@@ -510,7 +526,7 @@ in
                 IFS= read file
                 magick $file -resize 3840x2160^ -gravity center -extent 3840x2160 ~/.config/wallpaper.png &&
                     magick ~/.config/wallpaper.png -sigmoidal-contrast 3,60% -gamma 1.65 -colors 19 -depth 8 -format "%c" histogram:info: | sed 's/^.*#\([0-9A-Fa-f]\{6\}\) .*/@define-color color_# #\1;/;1,5d' | awk '{gsub("color_#", "color_" NR); print}' >~/.config/waybar/colors.css &&
-                    swww img ~/.config/wallpaper.png &&
+                    awww img ~/.config/wallpaper.png &&
                     pkill -SIGUSR2 waybar
         end
       '';
@@ -533,458 +549,13 @@ in
     };
     "10-podcaster-config" = {
       "${tmpFilesHomeDir}/.config/podcaster" = dir;
-      "${tmpFilesHomeDir}/.config/podcaster/bandcamp.yml" = link ''
-        parser:
-          source: bandcamp
-          cache_dir: /mnt/merged/podcaster_cache
-          # proxy: http://127.0.0.1:2080
-          # only_cache: true
-        downloader:
-          audio:
-            bitrate: 128
-          thumbnail:
-            side_size: 200
-            proxy: http://127.0.0.1:2080
-        uploader:
-          token: token
-          proxy:
-            ip: 127.0.0.1
-            port: 2080
-        tasks:
-          - artist: oddbehavior
-            chat: "-1003832515528"
-          - artist: jehnnybeth
-            chat: "-1003953161452"
-          - artist: panicworks
-            chat: "-1003911155413"
-          - artist: lostfrog
-            chat: "-1003967571675"
-          - artist: kufrecords
-            chat: "-1003978574706"
-          - artist: ab-sounds
-            chat: "-1003876376633"
-          - artist: captainjazz
-            chat: "-1003882948696"
-          - artist: sharptonerecords
-            chat: "-1003428904107"
-          - artist: theplotinyou
-            chat: "-1003318871073"
-          - artist: silentplanetbandofficial
-            chat: "-1003318131504"
-          - artist: rolotomassi
-            chat: "-1003368341317"
-          - artist: attackattackus
-            chat: "-1003324305573"
-          - artist: glacient
-            chat: "-1003223040850"
-          - artist: futurescapes-scifiambience
-            chat: "-1003120900893"
-          - artist: chaostetic1
-            chat: "-1003360941400"
-          - artist: qatilatal-asatir
-            chat: "-1003235238511"
-          - artist: maelthemarauder
-            chat: "-1003349442378"
-          # - artist: telehealthbeats
-          #   chat: "-1003491410106"
-          - artist: spyralvst
-            chat: "-1003155052397"
-          - artist: aenehway
-            chat: "-1003104146249"
-          - artist: mirajmusic
-            chat: "-1003169634202"
-          - artist: tsarewitch
-            chat: "-1002845456656"
-          - artist: churchofthetenhorns
-            chat: "-1003038332038"
-          # - artist: natecollins
-          #   chat: "-1002732866860"
-          - artist: angeloftheveil
-            chat: "-1003024384128"
-          - artist: EXOBASE
-            chat: "-1002923881225"
-          - artist: reflectionnebula
-            chat: "-1002772185690"
-          - artist: penelopetrappes
-            chat: "-1003089587397"
-          - artist: militantliturgy
-            chat: "-1003098561982"
-          - artist: cadlag
-            chat: "-1003002065924"
-          - artist: eaglestone
-            chat: "-1002973956494"
-          - artist: mistlabel
-            chat: "-1002782216734"
-          - artist: muslimgauze
-            chat: "-1003021050114"
-          - artist: apwnm
-            chat: "-1002775755747"
-          - artist: akhlys
-            chat: "-1002568315545"
-          - artist: cr3epymane
-            chat: "-1002569705139"
-          - artist: corradomariadesantis
-            chat: "-1002691237105"
-          - artist: vellvm
-            chat: "-1002483270566"
-          - artist: sadkirec
-            chat: "-1002454411332"
-          - artist: therecognitiontest
-            chat: "-1002618138921"
-          - artist: nataskunas
-            chat: "-1002529546780"
-          - artist: thedayoflifeforgotten
-            chat: "-1002606093307"
-          - artist: lebenerde
-            chat: "-1002585554252"
-          - artist: owltotem
-            chat: "-1002501874393"
-          - artist: sewerslvt
-            chat: "-1002619757055"
-          - artist: clppng
-            chat: "-1002625041445"
-          - artist: biosphere
-            chat: "-1002640055154"
-          - artist: hagioscope
-            chat: "-1002533983764"
-          - artist: janushoved
-            chat: "-1002305640999"
-          - artist: lussuria
-            chat: "-1002658435447"
-          - artist: gatesofhypnos
-            chat: "-1002225789412"
-          - artist: odesza
-            chat: "-1002673477935"
-          - artist: mentalblood
-            chat: "-1002529025745"
-          - artist: rec008
-            chat: "-1002529443933"
-          - artist: teeth-dreams
-            chat: "-1002671751748"
-          - artist: billbaxter
-            chat: "-1002554774460"
-          - artist: superheavenband
-            chat: "-1002346493807"
-          - artist: plohoband
-            chat: "-1002341156408"
-          - artist: dopestarsinc
-            chat: "-1002407908349"
-          - artist: lustre
-            chat: "-1002454655802"
-          - artist: sleepdealer
-            chat: "-1002484378891"
-          - artist: sylarny
-            chat: "-1002302331793"
-          # - artist: lxstcxntury1
-          #   chat: "-1002178712893"
-          - artist: logicmoon
-            chat: "-1002480883556"
-          - artist: thronocrigger
-            chat: "-1002352586903"
-          - artist: grizzlycogs
-            chat: "-1002495135544"
-          - artist: calaveralovesyou
-            chat: "-1002151926012"
-          - artist: blankenberge
-            chat: "-1002380621345"
-          - artist: sadnessmusic
-            chat: "-1002254091152"
-          - artist: lofigirl
-            chat: "-1002233871690"
-          - artist: monstercatmedia
-            chat: "-1002160479843"
-          - artist: sonnovdrone
-            chat: "-1002409608976"
-          - artist: hellberg1
-            chat: "-1002191534387"
-          - artist: saltings
-            chat: "-1002446591736"
-          - artist: kirril
-            chat: "-1002285448410"
-          - artist: hypnoisis
-            chat: "-1002315242156"
-          - artist: 777babalon
-            chat: "-1002498106249"
-          - artist: gallerysix
-            chat: "-1002407939654"
-          - artist: infinitedigits
-            chat: "-1002287862745"
-          - artist: bloodofapomegranate
-            chat: "-1002307948625"
-          - artist: weltlandschaft
-            chat: "-1002387774806"
-          - artist: nothing
-            chat: "-1002461964392"
-          - artist: peremotka
-            chat: "-1002494681646"
-          - artist: dramarecorder
-            chat: "-1002344987213"
-          - artist: aviewfromnihil
-            chat: "-1002272889399"
-          - artist: non-serviam
-            chat: "-1002330290497"
-          - artist: rhaddad
-            chat: "-1002387732733"
-          - artist: skynbrogd
-            chat: "-1002460139913"
-          - artist: insectarium
-            chat: "-1002206338755"
-          - artist: causalityparallelism
-            chat: "-1002396058494"
-          - artist: robertrich
-            chat: "-1002287300997"
-          - artist: amekcollective
-            chat: "-1002332555319"
-          - artist: arsenicsolaris
-            chat: "-1002322164332"
-          - artist: simonjkaris
-            chat: "-1002384542969"
-          - artist: traffic-in-front
-            chat: "-1002331166423"
-          - artist: mep2012
-            chat: "-1002279203274"
-          - artist: fragileasglass
-            chat: "-1002421054647"
-          - artist: riffmerchant
-            chat: "-1002358981041"
-          - artist: napalmdeath
-            chat: "-1002217784671"
-          - artist: gondolinrecords
-            chat: "-1002153036616"
-          - artist: darkdescentrecords
-            chat: "-1002197040143"
-          - artist: myersmusic
-            chat: "-1002174448789"
-          - artist: vendetta-records
-            chat: "-1002176921196"
-          - artist: richardpjohn
-            chat: "-1002193112971"
-          - artist: avoiddeath
-            chat: "-1002205963960"
-          - artist: momentarilyrecords
-            chat: "-1002189724964"
-          - artist: ugasanie
-            chat: "-1002236942681"
-          - artist: windows96
-            chat: "-1002211455492"
-          - artist: archeannights
-            chat: "-1002169226700"
-          - artist: hiemalambient
-            chat: "-1002165551727"
-          - artist: deathoncassette
-            chat: "-1002199344771"
-          - artist: htdc
-            chat: "-1002168463444"
-          - artist: ironcthulhuapocalypse
-            chat: "-1002212985693"
-          - artist: winterblood78
-            chat: "-1002154804156"
-          - artist: vacant
-            chat: "-1002234181818"
-          - artist: forndom
-            chat: "-1002155758590"
-          - artist: heksemote
-            chat: "-1002210731342"
-          - artist: cryochamber
-            chat: "-1002174793795"
-          - artist: skiparea
-            chat: "-1002185654626"
-          - artist: ithildintapeproduction
-            chat: "-1002206580136"
-          - artist: artsrecordings
-            chat: "-1002207813409"
-          - artist: coupprojekt
-            chat: "-1002184266435"
-          - artist: mentalmodern
-            chat: "-1002187669492"
-          - artist: 44labelgroup
-            chat: "-1002240764626"
-          - artist: severalminorpromises
-            chat: "-1002180907107"
-          - artist: vaticanshadow
-            chat: "-1002173999334"
-          - artist: untitledburial
-            chat: "-1002220980330"
-          - artist: tsumetai
-            chat: "-1002235563704"
-          - artist: oake
-            chat: "-1002218610652"
-          - artist: vesselofiniquity
-            chat: "-1002187345080"
-          - artist: panzerfaust
-            chat: "-1002170042812"
-          - artist: antxres
-            chat: "-1002229037243"
-          - artist: yorkshiremodularsociety
-            chat: "-1002205013839"
-          - artist: mabisyo
-            chat: "-1002230405800"
-          - artist: frontierer
-            chat: "-1002230179668"
-          - artist: postdynamicrecords
-            chat: "-1002222647738"
-          - artist: zodiakcommunerecords
-            chat: "-1002244974385"
-          - artist: hypnus
-            chat: "-1002236055506"
-          - artist: faintmusic
-            chat: "-1002147318287"
-          - artist: torusdome
-            chat: "-1002104316355"
-          - artist: lustmord
-            chat: "-1002236724079"
-          - artist: darkageproductions
-            chat: "-1002163294649"
-          - artist: madbackrecords
-            chat: "-1002209630770"
-          - artist: i-voidhangerrecords
-            chat: "-1002205715730"
-          - artist: insectorama
-            chat: "-1002247675290"
-          - artist: warmuprecordings
-            chat: "-1002192435559"
-          - artist: tokyotears
-            chat: "-1002156887081"
-          - artist: morbidbeauty
-            chat: "-1002221702810"
-          - artist: circularlimited
-            chat: "-1002206533271"
-          - artist: kvltorecords
-            chat: "-1002239994105"
-          - artist: gnawtheirtongues
-            chat: "-1002219814924"
-          - artist: apocalypticwitchcraft
-            chat: "-1002242735996"
-          - artist: darknetrecords
-            chat: "-1002171121050"
-          - artist: ancientkingrec
-            chat: "-1002217526376"
-          - artist: z0records
-            chat: "-1002157951753"
-          - artist: yuggothrecords
-            chat: "-1002245855930"
-          - artist: sentientruin
-            chat: "-1002212937886"
-          # - artist: genomrecords
-          #   chat: "-1002187898171"
-          - artist: ghostfailure
-            chat: "-1002165235912"
-          - artist: nuclearblast
-            chat: "-1002203607670"
-          - artist: pspsph
-            chat: "-1002213970047"
-          - artist: empty-space
-            chat: "-1002147378791"
-          - artist: coppicehalifax
-            chat: "-1002156153610"
-          - artist: sevenvillas
-            chat: "-1002212207539"
-          - artist: xcptmusic
-            chat: "-1002172118173"
-          - artist: bolu2death
-            chat: "-1002162407737"
-          - artist: monasteriumimperi
-            chat: "-1002179667670"
-          - artist: aerekaer
-            chat: "-1002245058391"
-          - artist: heimatderkatastrophe
-            chat: "-1002235931476"
-          - artist: wydraddear
-            chat: "-1002247021389"
-          - artist: blvckplvgue
-            chat: "-1002155780621"
-          # - artist: nodebarcelona
-          #   chat: "-1002220078901"
-          - artist: 47x47
-            chat: "-1002178482581"
-          - artist: yourtracklist
-            chat: "-1002224899969"
-          - artist: newretrowave
-            chat: "-1002214441782"
-          - artist: stmd
-            chat: "-1002185572029"
-          - artist: hiddentoys
-            chat: "-1002227402554"
-          - artist: mesarthim
-            chat: "-1002175985204"
-          - artist: skelermusic
-            chat: "-1002203439574"
-          - artist: hypnoform
-            chat: "-1002147495428"
-      '';
-      "${tmpFilesHomeDir}/.config/podcaster/youtube.yml" = link ''
-        log: info
-        parser:
-          source: youtube
-          cache_dir: /mnt/merged/podcaster_cache
-          proxy: http://127.0.0.1:2080
-          reversed: false
-          # only_cache: true
-        downloader:
-          audio:
-            bitrate: 0
-            proxy: http://127.0.0.1:2080
-            conversion:
-              bitrate: 128
-              samplerate: 44100
-              stereo: true
-          thumbnail:
-            side_size: 200
-            proxy: http://127.0.0.1:2080
-        uploader:
-          token: token
-          proxy:
-            ip: 127.0.0.1
-            port: 2080
-        tasks:
-          - artist: "playlist?list=OLAK5uy_nVEmu58x3yqFY7saOrDIXpMKO2ZlzzRb4&si=LAbGp3R2lTXIKIPf"
-            chat: "-1003827427470"
-          - artist: "playlist?list=OLAK5uy_mMt_8daBImPMRprrQtZix-M7ZdEfvcNlo&si=AztuJGOKyZZhSSyR"
-            chat: "-1003827427470"
-          - artist: "playlist?list=OLAK5uy_neJIlpgIKuFyyqYWJqBGgv5gD0XHCIhI4&si=NQ5-W4ycPiMoHM4r"
-            chat: "-1003827427470"
-          - artist: "playlist?list=OLAK5uy_mLauij9rn9YDFW9J3WeyX4HeylFcc-p_g&si=4QDgEtYH7w26D5BD"
-            chat: "-1003827427470"
-          - artist: "playlist?list=OLAK5uy_m2fmwdhBvY4um31InySf3-Xa9P6NuyxnU&si=GR5Kc_45vqNtng_r"
-            chat: "-1003827427470"
-          - artist: "@myersmusicofficial"
-            chat: "-1002174448789"
-          - artist: "@Panicmusic84"
-            chat: "-1003221300730"
-          - artist: "playlist?list=PLl6BRvEJ-auZ5aYPHj1B3pKJ_pLjg9qNU"
-            chat: "-1002585937030"
-          - artist: "@OBSIDIANSOUNDFIELDS"
-            chat: "-1002184412681"
-          - artist: "@LogicMoonMusic"
-            chat: "-1002480883556"
-          - artist: "@CHVRCHES"
-            chat: "-1002256572736"
-          - artist: "playlist?list=PL4V2ru1yxqsjbJkCJCT9BG-tdOdUq3gIU"
-            chat: "-1002278191820"
-          - artist: "playlist?list=PLcZMZxR9uxC9NUWciXBpZLF7_BCdcl5bL"
-            chat: "-1002254000084"
-          - artist: "@untitledburial"
-            chat: "-1002220980330"
-          - artist: "@EternalDystopiaMusic"
-            chat: "-1002226329150"
-          - artist: "@prometheusstudioambient"
-            chat: "-1002247625186"
-          - artist: "@Meisio"
-            chat: "-1002198570322"
-          - artist: "@departureskies"
-            chat: "-1002197360023"
-          - artist: "@shimon.hoshino"
-            chat: "-1002262683778"
-          - artist: "@LXSTCXNTURY555"
-            chat: "-1002178712893"
-      '';
       "${tmpFilesHomeDir}/.config/podcaster/philosophy_audio.yml" = link ''
         log: info
         parser:
           source: youtube
           cache_dir: /mnt/merged/podcaster_cache
           proxy: http://127.0.0.1:2080
-          reversed: true
+          reversed: false
           # only_cache: true
         downloader:
           audio:
@@ -1097,26 +668,30 @@ in
     };
     "10-scripts-config" = {
       "${tmpFilesHomeDir}/.config/scripts" = dir;
-      "${tmpFilesHomeDir}/.config/scripts/rebuild-nixos-from-configuration.fish" = link ''
-        #!/usr/bin/env fish
+      "${tmpFilesHomeDir}/.config/scripts/rebuild-nixos-from-configuration.bash" = link ''
+        #!/usr/bin/env bash
 
-        sudo nixos-rebuild switch --upgrade --max-jobs 16 --cores 16
+        sudo -s <<EOF
+        export http_proxy="http://127.0.0.1:2080"
+        export https_proxy="http://127.0.0.1:2080"
+        nixos-rebuild switch --upgrade --max-jobs 16 --cores 16
+        EOF
       '';
       "${tmpFilesHomeDir}/.config/scripts/alphabetically_sorted_images.fish" = link ''
         #!/usr/bin/env fish
 
-        for arg in $argv
-            set cleaned_arg (string unescape -- $arg)
-            fd . "$cleaned_arg" --type f | sort | nsxiv -a -
-        end
+        set cleaned_path (string unescape -- $argv[1])
+        set -l search_pattern $argv[2]
+        set -q search_pattern[1]; or set my_var "."
+        fd --full-path "$argv[2]" "$cleaned_path" --type f | sort | nsxiv -a -
       '';
       "${tmpFilesHomeDir}/.config/scripts/newest_sorted_images.fish" = link ''
         #!/usr/bin/env fish
 
-        for arg in $argv
-            set cleaned_arg (string unescape -- $arg)
-            fd . "$cleaned_arg" --type f -X ls --full-time | sd '^([^ ]+ +){5}' \'\' | sort -r | sd '^[^/]+/' / | nsxiv -a -
-        end
+        set cleaned_path (string unescape -- $argv[1])
+        set -l search_pattern $argv[2]
+        set -q search_pattern[1]; or set my_var "."
+        fd --full-path "$argv[2]" "$cleaned_path" --type f -X ls --full-time | sd '^([^ ]+ +){5}' \'\' | sort -r | sd '^[^/]+/' / | nsxiv -a -
       '';
       "${tmpFilesHomeDir}/.config/scripts/noise.fish" = link ''
         #!/usr/bin/env fish
@@ -1258,8 +833,6 @@ in
             local file="$1"
             local target_root="$2"
 
-
-            local filename=$(basename "$file")
             local output_file="$target_root$file"
 
             local output_relative_dir=$(dirname "$file")
@@ -1276,6 +849,58 @@ in
                 echo "$file"
             fi
         done | sort | parallel --jobs "$3" --bar process_file {} "$target_root"
+      '';
+      "${tmpFilesHomeDir}/.config/scripts/rename_with_hash_values.bash" = link ''
+        #!/usr/bin/env bash
+
+        set -o nounset
+        # set -o errexit
+
+        source_root="$1"
+        thumbnails_root="$2"
+
+        if [ ! -d "$source_root" ]; then
+            echo "Error: Source directory '$source_root' does not exist."
+            exit 1
+        fi
+
+        source_root=$(realpath "$source_root")
+        thumbnails_root=$(realpath "$thumbnails_root")
+
+        process_file() {
+            local file="$1"
+            local thumbnails_root="$2"
+
+            local file_dir=$(dirname "$file")
+            local hash=$(xxhsum -H2 "$file" | cut -d' ' -f1 | head -c -1)
+            local new_file="$file_dir/$hash.avif"
+
+            if [[ "$file" != "$new_file" ]]; then
+              local thumbnail="$thumbnails_root$file"
+              local new_thumbnail="$thumbnails_root$new_file"
+
+              mv "$file" "$new_file"
+              mv "$thumbnail" "$new_thumbnail"
+
+              touch -r "$new_file" "$new_thumbnail"
+            fi
+        }
+
+        export -f process_file
+
+        fd -t f -e avif . "$source_root" | parallel --bar --jobs "$3" process_file {} "$thumbnails_root"
+      '';
+      "${tmpFilesHomeDir}/.config/scripts/process_images.bash" = link ''
+        #!/usr/bin/env bash
+
+        set -o nounset
+
+        images_root="$1"
+        thumbnails_root="$2"
+
+        convert_to_avif_recursively.bash "$images_root" 4
+        thumbnails_create.bash "$images_root" "$thumbnails_root" 32
+        rename_with_hash_values.bash "$images_root" "$thumbnails_root" 32
       '';
       "${tmpFilesHomeDir}/.config/scripts/download_from_urls_list.bash" = link ''
         #!/usr/bin/env bash
@@ -1458,10 +1083,10 @@ in
     qmk-udev-rules
   ];
   systemd.user.services.podcaster = {
-    description = "upload audio from youtube and bandcamp to telegram";
+    description = "upload audio from youtube to telegram";
     serviceConfig = {
       Type = "simple";
-      ExecStart = "${tmpFilesHomeDir}/.local/bin/podcaster philosophy_audio youtube bandcamp";
+      ExecStart = "${tmpFilesHomeDir}/.local/bin/podcaster philosophy_audio";
       User = "mentalblood";
     };
     path = with pkgs; [
@@ -1494,7 +1119,7 @@ in
         executable = "${pkgs.firefox}/bin/firefox";
         profile = "${pkgs.firejail}/etc/firejail/firefox.profile";
         extraArgs = [
-          "--private=~/jails/firefox"
+          "--private=/mnt/merged/jails/firefox"
         ];
       };
       steam = {
@@ -1522,12 +1147,6 @@ in
         executable = "${pkgs.python3Packages.huggingface-hub}/bin/hf";
         extraArgs = [
           "--private=/mnt/merged/jails/huggingface-hub"
-        ];
-      };
-      Telegram = {
-        executable = "${pkgs.telegram-desktop}/bin/Telegram";
-        extraArgs = [
-          "--private=/mnt/merged/jails/telegram-desktop"
         ];
       };
       tuna = {
@@ -1696,7 +1315,7 @@ in
     yt-dlp
     sd
     gcc
-    swww
+    awww
     imagemagick
     fd
     ripgrep
@@ -1712,7 +1331,6 @@ in
     iptables
     python3Packages.huggingface-hub
     bash-language-server
-    telegram-desktop
     wine
     _7zz
     graphviz
@@ -1722,6 +1340,9 @@ in
     cloudflared
     feishin
     easytag
+    syncthing
+    hyperfine
+    xxhash
     (pkgs.symlinkJoin {
       name = "nsxiv";
       paths = [ pkgs.nsxiv ];
