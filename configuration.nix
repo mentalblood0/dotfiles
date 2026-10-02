@@ -106,6 +106,7 @@ in
     extraGroups = [
       "networkmanager"
       "wheel"
+      "samba"
     ];
   };
   systemd.tmpfiles.settings = {
@@ -188,7 +189,7 @@ in
         args = ["--login"]
 
         [font]
-        size = 11
+        size = 10
       '';
       "${tmpFilesHomeDir}/.config/alacritty/themes" = dir;
       "${tmpFilesHomeDir}/.config/alacritty/themes/modus-operandi-tinted.toml" = link ''
@@ -234,6 +235,8 @@ in
 
             set XDG_CONFIG_HOME ~/.config
             set SHELL fish
+            set PLAYWRIGHT_BROWSERS_PATH ${pkgs.playwright-driver.browsers}
+            set PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS true
             ulimit -n 8192
             if not set -q TMUX
                 exec tmux
@@ -267,6 +270,10 @@ in
         [editor.file-picker]
         hidden = false
 
+        [editor.inline-diagnostics]
+        cursor-line = "hint"
+        other-lines = "hint"
+
         [keys.normal]
         S-j = "@jjjjj"
         S-k = "@kkkkk"
@@ -293,6 +300,13 @@ in
         auto-format = true
         formatter = { command = "nixfmt" }
 
+        [language-server.tinymist]
+        command = "tinymist"
+
+        [[language]]
+        name = "typst"
+        language-servers = ["tinymist"]
+
         [[language]]
         name = "toml"
         auto-format = true
@@ -318,6 +332,9 @@ in
         formatter = { command = "rustfmt", args = ["--config", "format_strings=true", "--edition", "2024"] }
         auto-format = true
 
+        [language-server.rust-analyzer.config.check]
+        command = "clippy"
+
         [language.auto-pairs]
         '{' = '}'
         '[' = ']'
@@ -329,7 +346,6 @@ in
         name = "yaml"
         auto-format = false
         formatter = { command = "yamlfmt", args = ["-in"] }
-        language-servers = ["fs_watcher_lsp"]
 
         [[language]]
         name = "c-sharp"
@@ -344,6 +360,13 @@ in
         name = "javascript"
         auto-format = true
         formatter = { command = "js-beautify" }
+      '';
+    };
+    "10-niri-portals" = {
+      "${tmpFilesHomeDir}/.config/niri" = dir;
+      "${tmpFilesHomeDir}/.config/niri/portals.conf" = link ''
+        [preferred]
+        default=gnome;gtk;
       '';
     };
     "10-niri-config" = {
@@ -426,7 +449,9 @@ in
             opacity 0.7
         }
         binds {
-            Mod+C { spawn "pkill" "-SIGUSR2" "waybar"; }
+            Mod+C {
+              spawn "sh" "-c" "pkill -SIGUSR2 waybar && awww img ~/.config/wallpaper.png";
+            }
             Mod+Return { spawn "alacritty"; }
             Mod+D { spawn "fuzzel" "--terminal" "alacritty -e"; }
             Super+Alt+L { spawn "swaylock"; }
@@ -516,7 +541,11 @@ in
                 end
             case C-p
                 while IFS= read file
-                    cp -b "$file" /mnt/merged/pictures/other/photo/
+                    cp "$file" /mnt/merged/pictures/other/photo/
+                end
+            case C-g
+                while IFS= read file
+                    cp "$file" /mnt/merged/pictures/other/other/
                 end
             case C-d
                 while IFS= read file
@@ -524,7 +553,7 @@ in
                 end
             case C-w
                 IFS= read file
-                magick $file -resize 3840x2160^ -gravity center -extent 3840x2160 ~/.config/wallpaper.png &&
+                magick $file -resize 3840x2160^ -gravity north -extent 3840x2160 ~/.config/wallpaper.png &&
                     magick ~/.config/wallpaper.png -sigmoidal-contrast 3,60% -gamma 1.65 -colors 19 -depth 8 -format "%c" histogram:info: | sed 's/^.*#\([0-9A-Fa-f]\{6\}\) .*/@define-color color_# #\1;/;1,5d' | awk '{gsub("color_#", "color_" NR); print}' >~/.config/waybar/colors.css &&
                     awww img ~/.config/wallpaper.png &&
                     pkill -SIGUSR2 waybar
@@ -682,7 +711,7 @@ in
 
         set cleaned_path (string unescape -- $argv[1])
         set -l search_pattern $argv[2]
-        set -q search_pattern[1]; or set my_var "."
+        set -q search_pattern[1]; or set search_pattern "."
         fd --full-path "$argv[2]" "$cleaned_path" --type f | sort | nsxiv -a -
       '';
       "${tmpFilesHomeDir}/.config/scripts/newest_sorted_images.fish" = link ''
@@ -690,7 +719,7 @@ in
 
         set cleaned_path (string unescape -- $argv[1])
         set -l search_pattern $argv[2]
-        set -q search_pattern[1]; or set my_var "."
+        set -q search_pattern[1]; or set search_pattern "."
         fd --full-path "$argv[2]" "$cleaned_path" --type f -X ls --full-time | sd '^([^ ]+ +){5}' \'\' | sort -r | sd '^[^/]+/' / | nsxiv -a -
       '';
       "${tmpFilesHomeDir}/.config/scripts/noise.fish" = link ''
@@ -715,9 +744,11 @@ in
         process_file() {
           file="$1"
           shift  # Remove the file argument, leaving only avifenc options
-          output_file="''${file%.*}.avif"
+          local file_dir=$(dirname "$file")
+          local hash=$(xxhsum -H2 "$file" | cut -d' ' -f1 | head -c -1)
+          local output_file="$file_dir/$hash.avif"
           if [ ! -e "$output_file" ]; then
-            avifenc -q 75 --speed 6 "$@" "$file" "$output_file" > /dev/null && rm "$file"
+            avifenc -q 75 --speed 6 "$@" "$file" "$output_file" 2>&1 > /dev/null && rm "$file"
           else
             rm "$file"
           fi
@@ -806,6 +837,19 @@ in
         export -f process_file
 
         fd -e zip '.*' "$1" | sort | parallel --bar --jobs "$2" process_file {}
+      '';
+      "${tmpFilesHomeDir}/.config/scripts/add_replay_gain_recursively.bash" = link ''
+        #!/usr/bin/env bash
+
+        process_file() {
+            file="$1"
+            if ! metaflac --show-tag=REPLAYGAIN_TRACK_GAIN "$file" | grep -q .; then
+              metaflac --add-replay-gain "$file"
+            fi
+        }
+        export -f process_file
+
+        fd -e flac '.*' "$1" | sort | parallel --bar --jobs "$2" process_file {}
       '';
       "${tmpFilesHomeDir}/.config/scripts/stop_all_ollama_llms.fish" = link ''
         #!/usr/bin/env fish
@@ -896,11 +940,11 @@ in
         set -o nounset
 
         images_root="$1"
-        thumbnails_root="$2"
+        convertation_threads="''${2:-"4"}"
+        thumbnails_root="''${3:-"/mnt/merged/.cache/nsxiv/"}"
 
-        convert_to_avif_recursively.bash "$images_root" 4
+        convert_to_avif_recursively.bash "$images_root" "$convertation_threads"
         thumbnails_create.bash "$images_root" "$thumbnails_root" 32
-        rename_with_hash_values.bash "$images_root" "$thumbnails_root" 32
       '';
       "${tmpFilesHomeDir}/.config/scripts/download_from_urls_list.bash" = link ''
         #!/usr/bin/env bash
@@ -924,6 +968,15 @@ in
         export -f download_one
 
         parallel --bar --jobs "$2" download_one {} ::: "''${urls[@]}"
+      '';
+      "${tmpFilesHomeDir}/.config/scripts/move_and_process_new_images.bash" = link ''
+        #!/usr/bin/env bash
+
+        set -o nounset
+
+        mv /mnt/merged/jails/firefox/Downloads/pictures/* /mnt/merged/pictures/other/art/
+        mv /mnt/merged/pictures/new/* /mnt/merged/pictures/other/art/
+        process_images.bash /mnt/merged/pictures/other/art/ 32 /mnt/merged/.cache/nsxiv/
       '';
     };
     "10-waybar-config" = {
@@ -1068,6 +1121,74 @@ in
       '';
     };
   };
+  security.rtkit.enable = true;
+  services.pipewire = {
+    enable = true;
+    alsa.enable = true;
+    alsa.support32Bit = true;
+    pulse.enable = true;
+    jack.enable = true;
+  };
+  services.samba = {
+    enable = true;
+    package = pkgs.samba;
+    openFirewall = true;
+    settings = {
+      global = {
+        "workgroup" = "WORKGROUP";
+        "server string" = "nixos-server";
+        "netbios name" = "nixos";
+        "security" = "user";
+        "hosts allow" = "192.168.0. 127.0.0.1 localhost";
+        "hosts deny" = "0.0.0.0/0";
+        "guest account" = "nobody";
+        "map to guest" = "bad user";
+      };
+      "pictures.other" = {
+        "path" = "/mnt/merged/pictures/other";
+        "browseable" = "yes";
+        "read only" = "yes";
+        "guest ok" = "no";
+        "create mask" = "0644";
+        "directory mask" = "0755";
+        "valid users" = "mentalblood";
+      };
+      "pictures.new" = {
+        "path" = "/mnt/merged/pictures/new";
+        "browseable" = "yes";
+        "read only" = "no";
+        "guest ok" = "no";
+        "create mask" = "0644";
+        "directory mask" = "0755";
+        "valid users" = "mentalblood";
+      };
+      "books" = {
+        "path" = "/mnt/merged/books";
+        "browseable" = "yes";
+        "read only" = "yes";
+        "guest ok" = "no";
+        "create mask" = "0644";
+        "directory mask" = "0755";
+        "valid users" = "mentalblood";
+      };
+    };
+  };
+  services.samba-wsdd = {
+    enable = true;
+    openFirewall = true;
+  };
+  services.avahi = {
+    enable = true;
+    openFirewall = true;
+    nssmdns4 = true;
+    publish = {
+      enable = true;
+      addresses = true;
+      domain = true;
+      userServices = true;
+      workstation = true;
+    };
+  };
   services.navidrome = {
     enable = true;
     settings.MusicFolder = "/mnt/merged/music";
@@ -1082,28 +1203,56 @@ in
     via
     qmk-udev-rules
   ];
-  systemd.user.services.podcaster = {
-    description = "upload audio from youtube to telegram";
-    serviceConfig = {
-      Type = "simple";
-      ExecStart = "${tmpFilesHomeDir}/.local/bin/podcaster philosophy_audio";
-      User = "mentalblood";
+  systemd.user = {
+    services = {
+      podcaster = {
+        description = "upload audio from youtube to telegram";
+        serviceConfig = {
+          Type = "simple";
+          ExecStart = "${tmpFilesHomeDir}/.local/bin/podcaster philosophy_audio";
+          User = "mentalblood";
+        };
+        path = with pkgs; [
+          yt-dlp
+          ffmpeg
+        ];
+        wantedBy = [ "default.target" ];
+      };
     };
-    path = with pkgs; [
-      yt-dlp
-      ffmpeg
-    ];
-    wantedBy = [ "default.target" ];
+    timers = {
+      podcaster = {
+        description = "run podcaster every 2 hours";
+        timerConfig = {
+          OnBootSec = "5min";
+          OnUnitActiveSec = "2h";
+          Persistent = true;
+        };
+        wantedBy = [ "timers.target" ];
+        enable = true;
+      };
+    };
   };
-  systemd.user.timers.podcaster = {
-    description = "run podcaster every 2 hours";
-    timerConfig = {
-      OnBootSec = "5min";
-      OnUnitActiveSec = "2h";
-      Persistent = true;
-    };
-    wantedBy = [ "timers.target" ];
+  nix.settings = {
+    experimental-features = [
+      "nix-command"
+      "flakes"
+    ];
+    substituters = [
+      "https://psysonic.cachix.org"
+      "https://cache.nixos.org/"
+    ];
+    trusted-public-keys = [
+      "psysonic.cachix.org-1:M9cQyQ7tgvUWOQ5Pyt8ozlMoPLtOZir6MfRuTH9/VYA="
+      "cache.nixos.org-1:6NCHdSuAYQQOxGEKTGXLN9WWRXoSBT8GRiSnR6IdfGW="
+    ];
+  };
+  programs.nix-ld = {
     enable = true;
+    libraries = with pkgs; [
+      wayland
+      libX11
+      # Add other common runtime dependencies if needed (e.g., libGL, glfw)
+    ];
   };
   programs.fish = {
     enable = true;
@@ -1141,12 +1290,6 @@ in
         executable = "${ollama-wrapper-script}/bin/ollama-wrapper-script";
         extraArgs = [
           "--private=/mnt/merged/jails/ollama_with_internet_access"
-        ];
-      };
-      hf = {
-        executable = "${pkgs.python3Packages.huggingface-hub}/bin/hf";
-        extraArgs = [
-          "--private=/mnt/merged/jails/huggingface-hub"
         ];
       };
       tuna = {
@@ -1287,11 +1430,8 @@ in
     mergerfs-tools
     alacritty
     fuzzel
-    crystal
-    shards
     pulseaudio
     pulsemixer
-    cmus
     zathura
     throne
     bottom
@@ -1305,7 +1445,6 @@ in
     nixfmt
     rust-analyzer
     rustup
-    fish-lsp
     vscode-langservers-extracted
     markdown-oxide
     nixd
@@ -1324,25 +1463,28 @@ in
     xwayland-satellite
     parallel
     unzip
-    dioxus-cli
     libavif
     playerctl
     ollama-rocm
     iptables
-    python3Packages.huggingface-hub
     bash-language-server
-    wine
     _7zz
     graphviz
     dot-language-server
-    via
-    vial
-    cloudflared
-    feishin
     easytag
     syncthing
     hyperfine
     xxhash
+    lsd
+    nodejs
+    yaml-language-server
+    crystal
+    shards
+    yamlfmt
+    typst
+    flac
+    vial
+    flatpak
     (pkgs.symlinkJoin {
       name = "nsxiv";
       paths = [ pkgs.nsxiv ];
@@ -1356,6 +1498,9 @@ in
   fonts.packages = with pkgs; [
     nerd-fonts.symbols-only
     nerd-fonts.jetbrains-mono
+    iosevka
+    noto-fonts
+    noto-fonts-cjk-sans
   ];
   system.stateVersion = "25.11";
 }
